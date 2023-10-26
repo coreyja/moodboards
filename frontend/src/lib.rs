@@ -9,6 +9,25 @@ extern "C" {
 }
 
 #[wasm_bindgen(start)]
-fn start() {
-    log("Hello from Rust!")
+fn start() -> Result<(), JsValue> {
+    log("Hello from Rust with a new script!");
+
+    let new_h1 = web_sys::window()
+        .unwrap()
+        .document()
+        .unwrap()
+        .create_element("h1")
+        .unwrap();
+
+    new_h1.set_text_content(Some("A new h1 appeared"));
+
+    web_sys::window()
+        .unwrap()
+        .document()
+        .unwrap()
+        .body()
+        .unwrap()
+        .append_child(&new_h1)?;
+
+    Ok(())
 }
