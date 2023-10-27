@@ -3,13 +3,37 @@ use axum::{
     routing::get,
     Router,
 };
+use rand::seq::SliceRandom;
 use std::net::SocketAddr;
+
+fn images_urls() -> Vec<&'static str> {
+    vec![
+        "https://images.pexels.com/photos/15777319/pexels-photo-15777319/free-photo-of-abundance-of-fruit-in-boxes.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+        "https://images.pexels.com/photos/18796603/pexels-photo-18796603/free-photo-of-golden-light.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+        "https://images.pexels.com/photos/18642137/pexels-photo-18642137/free-photo-of-train-on-track-near-buildings.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+        "https://images.pexels.com/photos/18732177/pexels-photo-18732177/free-photo-of-schloss-weesenstein-palace-in-germany.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+        "https://images.pexels.com/photos/18851700/pexels-photo-18851700/free-photo-of-a-woman-in-a-white-dress-and-brown-cardigan.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+    ]
+}
 
 #[tokio::main]
 async fn main() {
     // build our application with a route
     let app = Router::new()
         .route("/", get(handler))
+        .route(
+            "/random_image",
+            get(|| async move {
+                let image_url = images_urls()
+                    .choose(&mut rand::thread_rng())
+                    .cloned()
+                    .unwrap();
+
+                maud::html! {
+                    img src=(image_url) id="replaceable-image" {}
+                }
+            }),
+        )
         .route(
             "/pkg/frontend.js",
             get(|| async move {
@@ -47,6 +71,11 @@ async fn main() {
 }
 
 async fn handler() -> impl IntoResponse {
+    let image_url = images_urls()
+        .choose(&mut rand::thread_rng())
+        .cloned()
+        .unwrap();
+
     maud::html! {
         html {
             body {
@@ -61,8 +90,15 @@ async fn handler() -> impl IntoResponse {
                         run();
                     "#))
                 }
+
+                h1 { "Hello from Rust!" }
+
+                img src=(image_url) id="replaceable-image" {}
+
+                button cja-click="/random_image" cja-method="GET" cja-replace-id="replaceable-image" {
+                    "Next Image"
+                }
             }
         }
-        h1 { "Hello from Rust!" }
     }
 }
