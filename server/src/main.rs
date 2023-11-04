@@ -1,8 +1,4 @@
-use axum::{
-    response::{Html, IntoResponse},
-    routing::get,
-    Router,
-};
+use axum::{response::IntoResponse, routing::get, Router};
 use rand::seq::SliceRandom;
 use std::net::SocketAddr;
 
