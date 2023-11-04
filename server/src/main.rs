@@ -1,6 +1,6 @@
-use axum::{response::IntoResponse, routing::get, Router};
+use axum::{extract::{State, Path}, response::IntoResponse, routing::{get, post}, Router};
 use miette::IntoDiagnostic;
-use rand::seq::SliceRandom;
+use rand::seq::{IteratorRandom, SliceRandom};
 use sqlx::SqlitePool;
 use std::net::SocketAddr;
 use tokio::fs::{File, OpenOptions};
@@ -13,6 +13,44 @@ fn images_urls() -> Vec<&'static str> {
         "https://images.pexels.com/photos/18732177/pexels-photo-18732177/free-photo-of-schloss-weesenstein-palace-in-germany.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
         "https://images.pexels.com/photos/18851700/pexels-photo-18851700/free-photo-of-a-woman-in-a-white-dress-and-brown-cardigan.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
     ]
+}
+
+const UPVOTE_SCORE: i64 = 1;
+const DOWNVOTE_SCORE: i64 = -1;
+
+// TODO: Remove this when images have better ids
+fn image_id(url: &str) -> i64 {
+    images_urls().iter().position(|u| &url == u).unwrap() as i64
+}
+
+async fn next_image_for_moodboard(
+    moodboard_id: i64,
+    pool: SqlitePool,
+) -> miette::Result<Option<&'static str>> {
+    let rated_picture_urls = sqlx::query!(
+        "SELECT url from PictureRatings WHERE moodboard_id = ?",
+        moodboard_id
+    )
+    .fetch_all(&pool)
+    .await
+    .into_diagnostic()?;
+    dbg!(&rated_picture_urls);
+
+    let unrated_picture_urls = images_urls().into_iter().filter(|url| {
+        !rated_picture_urls
+            .iter()
+            .any(|rated_url| rated_url.url == **url)
+    });
+
+    Ok(unrated_picture_urls.choose(&mut rand::thread_rng()))
+}
+
+#[derive(Clone, Debug)]
+struct AppState {
+    pool: SqlitePool,
+    /// This SHOULD NOT be in app state long term
+    /// This is just to get started quicker
+    moodboard_id: i64,
 }
 
 #[tokio::main]
@@ -39,19 +77,55 @@ async fn main() -> miette::Result<()> {
         .await
         .into_diagnostic()?;
 
+    let moodboard_id: i64 = sqlx::query!(
+        r#"
+        INSERT INTO Moodboards (name)
+        VALUES ('My cool Moodboard') RETURNING moodboard_id;
+    "#
+    )
+    .fetch_one(&pool)
+    .await
+    .into_diagnostic()?
+    .moodboard_id;
+
+    let app_state = AppState { pool, moodboard_id };
+
     // build our application with a route
     let app = Router::new()
         .route("/", get(handler))
         .route(
-            "/random_image",
-            get(|| async move {
-                let image_url = images_urls()
-                    .choose(&mut rand::thread_rng())
-                    .cloned()
+            "/images/:image_id/upvote/",
+            post(|State(app_state): State<AppState>, Path(current_image_id): Path<i64>| async move {
+                // Write our upvote to the database
+                let urls = images_urls();
+
+                sqlx::query!(
+                    "INSERT INTO PictureRatings (moodboard_id, url, rating) VALUES (?, ?, ?)",
+                    app_state.moodboard_id,
+                    // TODO: Don't love this for going from id to url
+                    urls[current_image_id as usize],
+                    UPVOTE_SCORE)
+                    .execute(&app_state.pool)
+                    .await
+                    .unwrap();
+
+                let next_image_url = next_image_for_moodboard(app_state.moodboard_id, app_state.pool)
+                    .await
                     .unwrap();
 
                 maud::html! {
-                    img src=(image_url) id="replaceable-image" {}
+                    @if let Some(image_url) = next_image_url {
+                        div id="replaceable-image" {
+                            img src=(image_url) {}
+    
+                            button cja-click={"/images/" (image_id(image_url)) "/upvote/"} cja-method="POST" cja-replace-id="replaceable-image" {
+                                "Upvote Image"
+                            }
+                            button cja-click={"/images/" (image_id(image_url)) "/downvote/"} cja-method="POST" cja-replace-id="replaceable-image" {
+                                "Downvote Image"
+                            }
+                        }
+                    }
                 }
             }),
         )
@@ -80,7 +154,8 @@ async fn main() -> miette::Result<()> {
                     )
                 }
             }),
-        );
+        )
+        .with_state(app_state);
 
     // run it
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
@@ -93,10 +168,9 @@ async fn main() -> miette::Result<()> {
     Ok(())
 }
 
-async fn handler() -> impl IntoResponse {
-    let image_url = images_urls()
-        .choose(&mut rand::thread_rng())
-        .cloned()
+async fn handler(State(app_state): State<AppState>) -> impl IntoResponse {
+    let image_url = next_image_for_moodboard(app_state.moodboard_id, app_state.pool)
+        .await
         .unwrap();
 
     maud::html! {
@@ -114,13 +188,21 @@ async fn handler() -> impl IntoResponse {
                     "#))
                 }
 
-                h1 { "Hello from Rust!" }
+                h1 { "Moodboard Id:" (app_state.moodboard_id) }
 
-                img src=(image_url) id="replaceable-image" {}
+                @if let Some(image_url) = image_url {
+                    div id="replaceable-image" {
+                        img src=(image_url) {}
 
-                button cja-click="/random_image" cja-method="GET" cja-replace-id="replaceable-image" {
-                    "Next Image"
+                        button cja-click={"/images/" (image_id(image_url)) "/upvote/"} cja-method="POST" cja-replace-id="replaceable-image" {
+                            "Upvote Image"
+                        }
+                        button cja-click={"/images/" (image_id(image_url)) "/downvote/"} cja-method="POST" cja-replace-id="replaceable-image" {
+                            "Downvote Image"
+                        }
+                    }
                 }
+
             }
         }
     }
