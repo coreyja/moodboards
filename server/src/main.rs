@@ -1,6 +1,9 @@
 use axum::{response::IntoResponse, routing::get, Router};
+use miette::IntoDiagnostic;
 use rand::seq::SliceRandom;
+use sqlx::SqlitePool;
 use std::net::SocketAddr;
+use tokio::fs::{File, OpenOptions};
 
 fn images_urls() -> Vec<&'static str> {
     vec![
@@ -13,7 +16,29 @@ fn images_urls() -> Vec<&'static str> {
 }
 
 #[tokio::main]
-async fn main() {
+async fn main() -> miette::Result<()> {
+    let db_path = std::env::var("DATABASE_PATH").into_diagnostic()?;
+
+    OpenOptions::new()
+        .create(true)
+        .write(true)
+        .open(&db_path)
+        .await
+        .into_diagnostic()?;
+
+    let db_url = format!("sqlite://{}", db_path);
+    let pool = SqlitePool::connect(&db_url).await.into_diagnostic()?;
+
+    sqlx::query!("PRAGMA foreign_keys = ON;")
+        .execute(&pool)
+        .await
+        .into_diagnostic()?;
+
+    sqlx::migrate!("../migrations")
+        .run(&pool)
+        .await
+        .into_diagnostic()?;
+
     // build our application with a route
     let app = Router::new()
         .route("/", get(handler))
@@ -64,6 +89,8 @@ async fn main() {
         .serve(app.into_make_service())
         .await
         .unwrap();
+
+    Ok(())
 }
 
 async fn handler() -> impl IntoResponse {
