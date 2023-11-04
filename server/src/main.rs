@@ -130,6 +130,41 @@ async fn main() -> miette::Result<()> {
             }),
         )
         .route(
+            "/images/:image_id/downvote/",
+            post(|State(app_state): State<AppState>, Path(current_image_id): Path<i64>| async move {
+                let urls = images_urls();
+
+                sqlx::query!(
+                    "INSERT INTO PictureRatings (moodboard_id, url, rating) VALUES (?, ?, ?)",
+                    app_state.moodboard_id,
+                    // TODO: Don't love this for going from id to url
+                    urls[current_image_id as usize],
+                    DOWNVOTE_SCORE)
+                    .execute(&app_state.pool)
+                    .await
+                    .unwrap();
+
+                let next_image_url = next_image_for_moodboard(app_state.moodboard_id, app_state.pool)
+                    .await
+                    .unwrap();
+
+                maud::html! {
+                    @if let Some(image_url) = next_image_url {
+                        div id="replaceable-image" {
+                            img src=(image_url) {}
+    
+                            button cja-click={"/images/" (image_id(image_url)) "/upvote/"} cja-method="POST" cja-replace-id="replaceable-image" {
+                                "Upvote Image"
+                            }
+                            button cja-click={"/images/" (image_id(image_url)) "/downvote/"} cja-method="POST" cja-replace-id="replaceable-image" {
+                                "Downvote Image"
+                            }
+                        }
+                    }
+                }
+            }),
+        )
+        .route(
             "/pkg/frontend.js",
             get(|| async move {
                 {
