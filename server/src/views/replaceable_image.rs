@@ -1,6 +1,7 @@
 use maud::{html, Render};
+use miette::Result;
 
-use crate::images_urls;
+use crate::{images_urls, AppState};
 
 pub struct ReplaceableImage {
     image_url: String,
@@ -26,6 +27,15 @@ impl ReplaceableImage {
         let image_url = image_url?;
 
         Some(Self::from_url(image_url))
+    }
+
+    pub async fn next(app_state: &AppState) -> Result<Option<Self>> {
+        let next_image_url =
+            crate::db::next_image_for_moodboard(app_state.moodboard_id, app_state.pool.clone())
+                .await
+                .unwrap();
+
+        Ok(Self::from_optional_url(next_image_url))
     }
 }
 

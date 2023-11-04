@@ -5,16 +5,17 @@ use axum::{
     Router,
 };
 use miette::IntoDiagnostic;
-use rand::seq::IteratorRandom;
 use sqlx::SqlitePool;
 use std::net::SocketAddr;
 use tokio::fs::OpenOptions;
 
-use crate::views::image::ReplaceableImage;
+use crate::views::replaceable_image::ReplaceableImage;
 
 pub mod views {
-    pub mod image;
+    pub mod replaceable_image;
 }
+
+pub mod db;
 
 fn images_urls() -> Vec<&'static str> {
     vec![
@@ -29,30 +30,8 @@ fn images_urls() -> Vec<&'static str> {
 const UPVOTE_SCORE: i64 = 1;
 const DOWNVOTE_SCORE: i64 = -1;
 
-async fn next_image_for_moodboard(
-    moodboard_id: i64,
-    pool: SqlitePool,
-) -> miette::Result<Option<&'static str>> {
-    let rated_picture_urls = sqlx::query!(
-        "SELECT url from PictureRatings WHERE moodboard_id = ?",
-        moodboard_id
-    )
-    .fetch_all(&pool)
-    .await
-    .into_diagnostic()?;
-    dbg!(&rated_picture_urls);
-
-    let unrated_picture_urls = images_urls().into_iter().filter(|url| {
-        !rated_picture_urls
-            .iter()
-            .any(|rated_url| rated_url.url == **url)
-    });
-
-    Ok(unrated_picture_urls.choose(&mut rand::thread_rng()))
-}
-
 #[derive(Clone, Debug)]
-struct AppState {
+pub struct AppState {
     pool: SqlitePool,
     /// This SHOULD NOT be in app state long term
     /// This is just to get started quicker
@@ -117,14 +96,9 @@ async fn main() -> miette::Result<()> {
                     .await
                     .unwrap();
 
-                    let next_image_url =
-                        next_image_for_moodboard(app_state.moodboard_id, app_state.pool)
-                            .await
-                            .unwrap();
-
                     maud::html! {
-                        @if let Some(image_url) = next_image_url {
-                            (ReplaceableImage::from_url(image_url))
+                        @if let Some(image) = ReplaceableImage::next(&app_state).await.unwrap() {
+                            (image)
                         }
                     }
                 },
@@ -147,14 +121,9 @@ async fn main() -> miette::Result<()> {
                     .await
                     .unwrap();
 
-                    let next_image_url =
-                        next_image_for_moodboard(app_state.moodboard_id, app_state.pool)
-                            .await
-                            .unwrap();
-
                     maud::html! {
-                        @if let Some(image_url) = next_image_url {
-                            (ReplaceableImage::from_url(image_url))
+                        @if let Some(image) = ReplaceableImage::next(&app_state).await.unwrap() {
+                            (image)
                         }
                     }
                 },
@@ -200,10 +169,6 @@ async fn main() -> miette::Result<()> {
 }
 
 async fn handler(State(app_state): State<AppState>) -> impl IntoResponse {
-    let image_url = next_image_for_moodboard(app_state.moodboard_id, app_state.pool)
-        .await
-        .unwrap();
-
     maud::html! {
         html {
             body {
@@ -221,10 +186,9 @@ async fn handler(State(app_state): State<AppState>) -> impl IntoResponse {
 
                 h1 { "Moodboard Id:" (app_state.moodboard_id) }
 
-                @if let Some(image_url) = image_url {
-                    (ReplaceableImage::from_url(image_url))
+                @if let Some(image) = ReplaceableImage::next(&app_state).await.unwrap() {
+                    (image)
                 }
-
             }
         }
     }
