@@ -1,9 +1,20 @@
-use axum::{extract::{State, Path}, response::IntoResponse, routing::{get, post}, Router};
+use axum::{
+    extract::{Path, State},
+    response::IntoResponse,
+    routing::{get, post},
+    Router,
+};
 use miette::IntoDiagnostic;
-use rand::seq::{IteratorRandom, SliceRandom};
+use rand::seq::IteratorRandom;
 use sqlx::SqlitePool;
 use std::net::SocketAddr;
-use tokio::fs::{File, OpenOptions};
+use tokio::fs::OpenOptions;
+
+use crate::views::image::ReplaceableImage;
+
+pub mod views {
+    pub mod image;
+}
 
 fn images_urls() -> Vec<&'static str> {
     vec![
@@ -17,11 +28,6 @@ fn images_urls() -> Vec<&'static str> {
 
 const UPVOTE_SCORE: i64 = 1;
 const DOWNVOTE_SCORE: i64 = -1;
-
-// TODO: Remove this when images have better ids
-fn image_id(url: &str) -> i64 {
-    images_urls().iter().position(|u| &url == u).unwrap() as i64
-}
 
 async fn next_image_for_moodboard(
     moodboard_id: i64,
@@ -95,74 +101,64 @@ async fn main() -> miette::Result<()> {
         .route("/", get(handler))
         .route(
             "/images/:image_id/upvote/",
-            post(|State(app_state): State<AppState>, Path(current_image_id): Path<i64>| async move {
-                // Write our upvote to the database
-                let urls = images_urls();
+            post(
+                |State(app_state): State<AppState>, Path(current_image_id): Path<i64>| async move {
+                    // Write our upvote to the database
+                    let urls = images_urls();
 
-                sqlx::query!(
-                    "INSERT INTO PictureRatings (moodboard_id, url, rating) VALUES (?, ?, ?)",
-                    app_state.moodboard_id,
-                    // TODO: Don't love this for going from id to url
-                    urls[current_image_id as usize],
-                    UPVOTE_SCORE)
+                    sqlx::query!(
+                        "INSERT INTO PictureRatings (moodboard_id, url, rating) VALUES (?, ?, ?)",
+                        app_state.moodboard_id,
+                        // TODO: Don't love this for going from id to url
+                        urls[current_image_id as usize],
+                        UPVOTE_SCORE
+                    )
                     .execute(&app_state.pool)
                     .await
                     .unwrap();
 
-                let next_image_url = next_image_for_moodboard(app_state.moodboard_id, app_state.pool)
-                    .await
-                    .unwrap();
+                    let next_image_url =
+                        next_image_for_moodboard(app_state.moodboard_id, app_state.pool)
+                            .await
+                            .unwrap();
 
-                maud::html! {
-                    @if let Some(image_url) = next_image_url {
-                        div id="replaceable-image" {
-                            img src=(image_url) {}
-    
-                            button cja-click={"/images/" (image_id(image_url)) "/upvote/"} cja-method="POST" cja-replace-id="replaceable-image" {
-                                "Upvote Image"
-                            }
-                            button cja-click={"/images/" (image_id(image_url)) "/downvote/"} cja-method="POST" cja-replace-id="replaceable-image" {
-                                "Downvote Image"
-                            }
+                    maud::html! {
+                        @if let Some(image_url) = next_image_url {
+                            (ReplaceableImage::from_url(image_url))
                         }
                     }
-                }
-            }),
+                },
+            ),
         )
         .route(
             "/images/:image_id/downvote/",
-            post(|State(app_state): State<AppState>, Path(current_image_id): Path<i64>| async move {
-                let urls = images_urls();
+            post(
+                |State(app_state): State<AppState>, Path(current_image_id): Path<i64>| async move {
+                    let urls = images_urls();
 
-                sqlx::query!(
-                    "INSERT INTO PictureRatings (moodboard_id, url, rating) VALUES (?, ?, ?)",
-                    app_state.moodboard_id,
-                    // TODO: Don't love this for going from id to url
-                    urls[current_image_id as usize],
-                    DOWNVOTE_SCORE)
+                    sqlx::query!(
+                        "INSERT INTO PictureRatings (moodboard_id, url, rating) VALUES (?, ?, ?)",
+                        app_state.moodboard_id,
+                        // TODO: Don't love this for going from id to url
+                        urls[current_image_id as usize],
+                        DOWNVOTE_SCORE
+                    )
                     .execute(&app_state.pool)
                     .await
                     .unwrap();
 
-                let next_image_url = next_image_for_moodboard(app_state.moodboard_id, app_state.pool)
-                    .await
-                    .unwrap();
+                    let next_image_url =
+                        next_image_for_moodboard(app_state.moodboard_id, app_state.pool)
+                            .await
+                            .unwrap();
 
-                maud::html! {
-                    @if let Some(image_url) = next_image_url {
-                        div id="replaceable-image" {
-                            img src=(image_url) {}
-    
-                            button cja-click={"/images/" (image_id(image_url)) "/upvote/"} cja-method="POST" cja-replace-id="replaceable-image" {
-                                "Upvote Image"
-                            }
-                            button cja-click={"/images/" (image_id(image_url)) "/downvote/"} cja-method="POST" cja-replace-id="replaceable-image" {
-                                "Downvote Image"
-                            }
+                    maud::html! {
+                        @if let Some(image_url) = next_image_url {
+                            (ReplaceableImage::from_url(image_url))
                         }
                     }
-                }
-            }),
+                },
+            ),
         )
         .route(
             "/pkg/frontend.js",
@@ -226,16 +222,7 @@ async fn handler(State(app_state): State<AppState>) -> impl IntoResponse {
                 h1 { "Moodboard Id:" (app_state.moodboard_id) }
 
                 @if let Some(image_url) = image_url {
-                    div id="replaceable-image" {
-                        img src=(image_url) {}
-
-                        button cja-click={"/images/" (image_id(image_url)) "/upvote/"} cja-method="POST" cja-replace-id="replaceable-image" {
-                            "Upvote Image"
-                        }
-                        button cja-click={"/images/" (image_id(image_url)) "/downvote/"} cja-method="POST" cja-replace-id="replaceable-image" {
-                            "Downvote Image"
-                        }
-                    }
+                    (ReplaceableImage::from_url(image_url))
                 }
 
             }
