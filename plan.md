@@ -1,7 +1,11 @@
 # Tasks
 
+- [ ] Create a Sqlite Database
+- [ ] Deploy this app somewhere
+- [ ] Make sure Sqlite DB is persisted across deploys
 - [ ] Clicking either rating button will store the rating for the picture
 - [ ] Create Better Layout of picture with rating buttons
+- [ ] Add LiteFS to replicate the DB across multiple containers
 
 ## Done on First Stream
 
