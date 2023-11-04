@@ -1,11 +1,26 @@
 # Tasks
 
-- [ ] Create a Sqlite Database
 - [ ] Deploy this app somewhere
 - [ ] Make sure Sqlite DB is persisted across deploys
-- [ ] Clicking either rating button will store the rating for the picture
 - [ ] Create Better Layout of picture with rating buttons
 - [ ] Add LiteFS to replicate the DB across multiple containers
+
+## Done on Second Stream
+
+- [x] Create a Sqlite Database
+- [x] Clicking either rating button will store the rating for the picture
+
+Today we worked on getting a Sqlite database setup and working with the
+saving PictureRatings to the DB.
+
+Now you can upvote or downvote any image, and it will be saved to the DB.
+
+We are currently just creating a new MoodBoard row each time the server boots.
+This is help in AppState at the moment, but won't be long term
+
+We created a very basic Data Diagram at: <https://link.excalidraw.com/readonly/NUDxops7knZMQLFkgFmO>
+
+We don't have any User stuff modeled yet, but we will get there.
 
 ## Done on First Stream
 
