@@ -1,5 +1,8 @@
 # Tasks
 
+- [ ] Intergrate with the Pinterest API for retrieving Boards and Pins
+- [ ] Figure out user modeling and authentication
+- [ ] Ability for a designer to create a new MoodBoard
 - [ ] Deploy this app somewhere
 - [ ] Make sure Sqlite DB is persisted across deploys
 - [ ] Create Better Layout of picture with rating buttons
