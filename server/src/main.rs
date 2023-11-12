@@ -21,16 +21,6 @@ pub mod apis {
     pub mod pexels;
 }
 
-fn images_urls() -> Vec<&'static str> {
-    vec![
-        "https://images.pexels.com/photos/15777319/pexels-photo-15777319/free-photo-of-abundance-of-fruit-in-boxes.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
-        "https://images.pexels.com/photos/18796603/pexels-photo-18796603/free-photo-of-golden-light.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
-        "https://images.pexels.com/photos/18642137/pexels-photo-18642137/free-photo-of-train-on-track-near-buildings.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
-        "https://images.pexels.com/photos/18732177/pexels-photo-18732177/free-photo-of-schloss-weesenstein-palace-in-germany.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
-        "https://images.pexels.com/photos/18851700/pexels-photo-18851700/free-photo-of-a-woman-in-a-white-dress-and-brown-cardigan.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
-    ]
-}
-
 const UPVOTE_SCORE: i64 = 1;
 const DOWNVOTE_SCORE: i64 = -1;
 
@@ -91,7 +81,8 @@ async fn main() -> miette::Result<()> {
             "/testing",
             get(|State(config): State<AppState>| async move {
                 let media =
-                    apis::pexels::get_my_first_collection_media(&config.pexels_api_key).await;
+                    apis::pexels::get_my_first_collection_media(&config.pexels_api_key).await.unwrap();
+
 
                 format!("{:?}", media)
             }),
@@ -100,14 +91,10 @@ async fn main() -> miette::Result<()> {
             "/images/:image_id/upvote/",
             post(
                 |State(app_state): State<AppState>, Path(current_image_id): Path<i64>| async move {
-                    // Write our upvote to the database
-                    let urls = images_urls();
-
                     sqlx::query!(
-                        "INSERT INTO PictureRatings (moodboard_id, url, rating) VALUES (?, ?, ?)",
+                        "INSERT INTO PictureRatings (moodboard_id, pexels_id, rating) VALUES (?, ?, ?)",
                         app_state.moodboard_id,
-                        // TODO: Don't love this for going from id to url
-                        urls[current_image_id as usize],
+                        current_image_id,
                         UPVOTE_SCORE
                     )
                     .execute(&app_state.pool)
@@ -126,13 +113,10 @@ async fn main() -> miette::Result<()> {
             "/images/:image_id/downvote/",
             post(
                 |State(app_state): State<AppState>, Path(current_image_id): Path<i64>| async move {
-                    let urls = images_urls();
-
                     sqlx::query!(
-                        "INSERT INTO PictureRatings (moodboard_id, url, rating) VALUES (?, ?, ?)",
+                        "INSERT INTO PictureRatings (moodboard_id, pexels_id, rating) VALUES (?, ?, ?)",
                         app_state.moodboard_id,
-                        // TODO: Don't love this for going from id to url
-                        urls[current_image_id as usize],
+                        current_image_id,
                         DOWNVOTE_SCORE
                     )
                     .execute(&app_state.pool)

@@ -2,25 +2,25 @@ use miette::IntoDiagnostic;
 use rand::seq::IteratorRandom;
 use sqlx::SqlitePool;
 
-use crate::images_urls;
+use crate::apis::pexels::{get_my_first_collection_media, PexelsImage};
 
-pub async fn next_image_for_moodboard(
+pub(crate) async fn next_image_for_moodboard(
+    pexels_api_key: &str,
     moodboard_id: i64,
     pool: SqlitePool,
-) -> miette::Result<Option<&'static str>> {
-    let rated_picture_urls = sqlx::query!(
-        "SELECT url from PictureRatings WHERE moodboard_id = ?",
+) -> miette::Result<Option<PexelsImage>> {
+    let rated = sqlx::query!(
+        "SELECT pexels_id from PictureRatings WHERE moodboard_id = ?",
         moodboard_id
     )
     .fetch_all(&pool)
     .await
     .into_diagnostic()?;
 
-    let unrated_picture_urls = images_urls().into_iter().filter(|url| {
-        !rated_picture_urls
-            .iter()
-            .any(|rated_url| rated_url.url == **url)
-    });
+    let unrated_picture_urls = get_my_first_collection_media(pexels_api_key)
+        .await?
+        .into_iter()
+        .filter(|media| !rated.iter().any(|rated| rated.pexels_id == media.id));
 
     Ok(unrated_picture_urls.choose(&mut rand::thread_rng()))
 }

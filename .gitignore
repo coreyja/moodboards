@@ -17,4 +17,4 @@ frontend/out
 
 .envrc
 .env
-*.sqlite3
+*.sqlite3*
