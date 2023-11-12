@@ -26,7 +26,13 @@ pub async fn get_my_collections(api_key: &str) -> Result<Vec<Value>> {
 struct CollectionResponse {
     id: String,
     media: Vec<PexelsMedia>,
+    page: i64,
+    per_page: i64,
+    total_results: i64,
+    prev_page: Option<String>,
+    next_page: Option<String>,
 }
+
 impl CollectionResponse {
     fn images(self) -> Vec<PexelsImage> {
         self.media
@@ -39,31 +45,34 @@ impl CollectionResponse {
     }
 }
 
-pub(crate) async fn get_collection_media(
+pub(crate) async fn get_collection_images(
     api_key: &str,
     collection_id: &str,
 ) -> miette::Result<Vec<PexelsImage>> {
     let client = reqwest::Client::new();
     let url = format!("https://api.pexels.com/v1/collections/{collection_id}");
-    let response = client
-        .get(url)
-        .header("Authorization", api_key)
-        .send()
-        .await
-        .into_diagnostic()?;
-    // let response = response
-    //     .json::<CollectionResponse>()
-    //     .await
-    //     .into_diagnostic()?;
-    let response = response
-        .json::<serde_json::Value>()
-        .await
-        .into_diagnostic()?;
-    dbg!(response.clone());
 
-    let response = serde_json::from_value::<CollectionResponse>(response).into_diagnostic()?;
+    let mut next_page = Some(url);
+    let mut images = vec![];
 
-    Ok(response.images())
+    while let Some(next) = next_page {
+        let response = client
+            .get(next)
+            .header("Authorization", api_key)
+            .send()
+            .await
+            .into_diagnostic()?;
+        let response = response
+            .json::<CollectionResponse>()
+            .await
+            .into_diagnostic()?;
+
+        next_page = response.next_page.clone();
+
+        images.append(&mut response.images());
+    }
+
+    Ok(images)
 }
 
 pub(crate) async fn get_my_first_collection_media(api_key: &str) -> Result<Vec<PexelsImage>> {
@@ -71,7 +80,7 @@ pub(crate) async fn get_my_first_collection_media(api_key: &str) -> Result<Vec<P
     let collection_id = &collections[0]["id"].as_str().ok_or_else(|| {
         miette::miette!("Failed to parse collection id from {:?}", collections[0])
     })?;
-    let media = get_collection_media(api_key, collection_id).await?;
+    let media = get_collection_images(api_key, collection_id).await?;
 
     Ok(media)
 }
