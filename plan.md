@@ -1,6 +1,6 @@
 # Tasks
 
-- [ ] Intergrate with the Pinterest API for retrieving Boards and Pins
+- [ ] Intergrate with the Pexels API for retrieving images from a collection
 - [ ] Figure out user modeling and authentication
 - [ ] Ability for a designer to create a new MoodBoard
 - [ ] Deploy this app somewhere
