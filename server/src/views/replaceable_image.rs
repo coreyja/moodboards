@@ -4,18 +4,14 @@ use miette::Result;
 use crate::{apis::pexels::PexelsImage, AppState};
 
 pub struct ReplaceableImage {
-    image_url: String,
-    image_id: i64,
+    pexels_img: PexelsImage,
 }
 
 impl ReplaceableImage {
     pub(crate) fn from_optional_img(media: Option<PexelsImage>) -> Option<Self> {
         let media = media?;
 
-        Some(Self {
-            image_url: media.src.large,
-            image_id: media.id,
-        })
+        Some(Self { pexels_img: media })
     }
 
     pub async fn next(app_state: &AppState) -> Result<Option<Self>> {
@@ -31,12 +27,21 @@ impl Render for ReplaceableImage {
     fn render(&self) -> maud::Markup {
         html! {
           div id="replaceable-image" {
-            img src=(self.image_url) {}
+            figure {
+                img src=(self.pexels_img.src.large) {}
+                figcaption {
+                    "This "
+                    a href=(format!("https://www.pexels.com/photo/{}", self.pexels_img.id)) { "Photo" }
+                    " was taken by "
+                    a href=(self.pexels_img.photographer_url) { (self.pexels_img.photographer) }
+                    " on Pexels."
+                }
+            }
 
-            button cja-click={"/images/" (self.image_id) "/upvote/"} cja-method="POST" cja-replace-id="replaceable-image" {
+            button cja-click={"/images/" (self.pexels_img.id) "/upvote/"} cja-method="POST" cja-replace-id="replaceable-image" {
                 "Upvote Image"
             }
-            button cja-click={"/images/" (self.image_id) "/downvote/"} cja-method="POST" cja-replace-id="replaceable-image" {
+            button cja-click={"/images/" (self.pexels_img.id) "/downvote/"} cja-method="POST" cja-replace-id="replaceable-image" {
                 "Downvote Image"
             }
           }

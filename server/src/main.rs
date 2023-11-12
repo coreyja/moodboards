@@ -80,6 +80,7 @@ async fn main() -> miette::Result<()> {
     for image in images {
         let image_json = serde_json::to_string(&image).into_diagnostic()?;
 
+        println!("Inserting image");
         sqlx::query!(
             "INSERT INTO Pictures (moodboard_id, pexels_id, json) VALUES (?, ?, ?)",
             moodboard_id,
@@ -214,6 +215,8 @@ async fn handler(State(app_state): State<AppState>) -> impl IntoResponse {
                 @if let Some(image) = ReplaceableImage::next(&app_state).await.unwrap() {
                     (image)
                 }
+
+                a href="https://www.pexels.com" { "Photos provided by Pexels" }
             }
         }
     }

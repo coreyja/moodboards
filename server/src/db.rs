@@ -10,7 +10,9 @@ pub(crate) async fn next_image_for_moodboard(
 ) -> miette::Result<Option<PexelsImage>> {
     let unrated = sqlx::query!(
         "SELECT json from Pictures
-        LEFT JOIN PictureRatings using (pexels_id)
+        LEFT JOIN
+            PictureRatings on
+                Pictures.pexels_id = PictureRatings.pexels_id AND Pictures.moodboard_id = PictureRatings.moodboard_id
         WHERE Pictures.moodboard_id = ? AND PictureRatings.pexels_id is null",
         moodboard_id
     )
