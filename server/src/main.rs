@@ -17,6 +17,10 @@ pub mod views {
 
 pub mod db;
 
+pub mod apis {
+    pub mod pexels;
+}
+
 fn images_urls() -> Vec<&'static str> {
     vec![
         "https://images.pexels.com/photos/15777319/pexels-photo-15777319/free-photo-of-abundance-of-fruit-in-boxes.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
@@ -36,6 +40,7 @@ pub struct AppState {
     /// This SHOULD NOT be in app state long term
     /// This is just to get started quicker
     moodboard_id: i64,
+    pexels_api_key: String,
 }
 
 #[tokio::main]
@@ -73,11 +78,24 @@ async fn main() -> miette::Result<()> {
     .into_diagnostic()?
     .moodboard_id;
 
-    let app_state = AppState { pool, moodboard_id };
+    let app_state = AppState {
+        pool,
+        moodboard_id,
+        pexels_api_key: std::env::var("PEXELS_API_KEY").into_diagnostic()?,
+    };
 
     // build our application with a route
     let app = Router::new()
         .route("/", get(handler))
+        .route(
+            "/testing",
+            get(|State(config): State<AppState>| async move {
+                let media =
+                    apis::pexels::get_my_first_collection_media(&config.pexels_api_key).await;
+
+                format!("{:?}", media)
+            }),
+        )
         .route(
             "/images/:image_id/upvote/",
             post(
