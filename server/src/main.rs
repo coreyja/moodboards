@@ -72,11 +72,13 @@ async fn main() -> miette::Result<()> {
     let images = apis::pexels::get_my_first_collection_media(&pexels_api_key).await?;
 
     for image in images {
+        let image_json = serde_json::to_string(&image).into_diagnostic()?;
+
         sqlx::query!(
-            "INSERT INTO Pictures (moodboard_id, pexels_id, url) VALUES (?, ?, ?)",
+            "INSERT INTO Pictures (moodboard_id, pexels_id, json) VALUES (?, ?, ?)",
             moodboard_id,
             image.id,
-            image.src.large
+            image_json
         )
         .execute(&pool)
         .await

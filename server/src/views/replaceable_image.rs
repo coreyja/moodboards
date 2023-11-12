@@ -1,7 +1,7 @@
 use maud::{html, Render};
 use miette::Result;
 
-use crate::{db::Img, AppState};
+use crate::{apis::pexels::PexelsImage, AppState};
 
 pub struct ReplaceableImage {
     image_url: String,
@@ -9,12 +9,12 @@ pub struct ReplaceableImage {
 }
 
 impl ReplaceableImage {
-    pub(crate) fn from_optional_img(media: Option<Img>) -> Option<Self> {
+    pub(crate) fn from_optional_img(media: Option<PexelsImage>) -> Option<Self> {
         let media = media?;
 
         Some(Self {
-            image_url: media.url,
-            image_id: media.pexels_id,
+            image_url: media.src.large,
+            image_id: media.id,
         })
     }
 

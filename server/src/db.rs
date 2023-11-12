@@ -2,19 +2,14 @@ use miette::IntoDiagnostic;
 use rand::seq::SliceRandom;
 use sqlx::SqlitePool;
 
-#[derive(Clone, Debug, PartialEq)]
-pub(crate) struct Img {
-    pub(crate) pexels_id: i64,
-    pub(crate) url: String,
-}
+use crate::apis::pexels::PexelsImage;
 
 pub(crate) async fn next_image_for_moodboard(
     moodboard_id: i64,
     pool: SqlitePool,
-) -> miette::Result<Option<Img>> {
-    let unrated = sqlx::query_as!(
-        Img,
-        "SELECT pexels_id, url from Pictures
+) -> miette::Result<Option<PexelsImage>> {
+    let unrated = sqlx::query!(
+        "SELECT json from Pictures
         LEFT JOIN PictureRatings using (pexels_id)
         WHERE Pictures.moodboard_id = ? AND PictureRatings.pexels_id is null",
         moodboard_id
@@ -23,5 +18,12 @@ pub(crate) async fn next_image_for_moodboard(
     .await
     .into_diagnostic()?;
 
-    Ok(unrated.choose(&mut rand::thread_rng()).cloned())
+    let chosen = unrated.choose(&mut rand::thread_rng());
+
+    if let Some(chosen) = chosen {
+        let image: PexelsImage = serde_json::from_str(&chosen.json).into_diagnostic()?;
+        Ok(Some(image))
+    } else {
+        Ok(None)
+    }
 }

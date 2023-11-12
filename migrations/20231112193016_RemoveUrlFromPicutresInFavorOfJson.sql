@@ -1,0 +1,2 @@
+ALTER TABLE Pictures
+DROP COLUMN url;
