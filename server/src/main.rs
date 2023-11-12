@@ -68,10 +68,25 @@ async fn main() -> miette::Result<()> {
     .into_diagnostic()?
     .moodboard_id;
 
+    let pexels_api_key = std::env::var("PEXELS_API_KEY").into_diagnostic()?;
+    let images = apis::pexels::get_my_first_collection_media(&pexels_api_key).await?;
+
+    for image in images {
+        sqlx::query!(
+            "INSERT INTO Pictures (moodboard_id, pexels_id, url) VALUES (?, ?, ?)",
+            moodboard_id,
+            image.id,
+            image.src.large
+        )
+        .execute(&pool)
+        .await
+        .into_diagnostic()?;
+    }
+
     let app_state = AppState {
         pool,
         moodboard_id,
-        pexels_api_key: std::env::var("PEXELS_API_KEY").into_diagnostic()?,
+        pexels_api_key,
     };
 
     // build our application with a route
