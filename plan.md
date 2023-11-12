@@ -10,6 +10,7 @@
 
 - [x] Intergrate with the Pexels API for retrieving images from a collection
 - [x] Deploy this app somewhere
+- [x] Add CI and CD via Github Actions. We now run tests and git off a Fly Deploy if they are successful
 
 On this stream we decided to use the Pexels API to get images for our MoodBoard.
 We originally wanted to use the Pinterest API, but were unable to get access. Pexels API is free to use, so we went with that!
