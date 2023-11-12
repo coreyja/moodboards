@@ -37,10 +37,16 @@ pub struct AppState {
 async fn main() -> miette::Result<()> {
     let db_path = std::env::var("DATABASE_PATH").into_diagnostic()?;
 
+    let path = std::path::Path::new(&db_path);
+    if let Some(p) = path.parent() {
+        if !p.exists() {
+            std::fs::create_dir_all(p).into_diagnostic()?;
+        }
+    }
     OpenOptions::new()
         .create(true)
         .write(true)
-        .open(&db_path)
+        .open(&path)
         .await
         .into_diagnostic()?;
 
@@ -177,7 +183,7 @@ async fn main() -> miette::Result<()> {
         .with_state(app_state);
 
     // run it
-    let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
+    let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
     println!("listening on {}", addr);
     axum::Server::bind(&addr)
         .serve(app.into_make_service())

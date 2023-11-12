@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO PictureRatings (moodboard_id, pexels_id, rating) VALUES (?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "e0ae9fba762eaf222f2da5bcb77523296119dfba81ecfdf821882f94d825d580"
+}

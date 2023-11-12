@@ -1,0 +1,96 @@
+name: Rust Tests
+
+env:
+  DATABASE_PATH: "./db.sqlite3"
+  SQLX_OFFLINE: true
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    env:
+      CARGO_INCREMENTAL: 0
+      SCCACHE_GHA_ENABLED: "true"
+      RUSTC_WRAPPER: "sccache"
+    steps:
+      - name: Setup | Checkout
+        uses: actions/checkout@v2
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt clippy
+      - name: Run sccache-cache
+        uses: mozilla-actions/sccache-action@v0.0.3
+      # - run: |
+      #     curl -sLO https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-linux-x64 && \
+      #     chmod +x tailwindcss-linux-x64 && \
+      #     mv tailwindcss-linux-x64 tailwindcss && \
+      #     ./tailwindcss -i server/src/styles/tailwind.css -o target/tailwind.css
+      - name: Build | Lint
+        run: cargo clippy --all-targets --no-deps
+  doc:
+    name: Doc
+    runs-on: ubuntu-latest
+    env:
+      CARGO_INCREMENTAL: 0
+      SCCACHE_GHA_ENABLED: "true"
+      RUSTC_WRAPPER: "sccache"
+    steps:
+      - name: Setup | Checkout
+        uses: actions/checkout@v2
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Run sccache-cache
+        uses: mozilla-actions/sccache-action@v0.0.3
+      - name: Cargo Doc
+        run: cargo doc --workspace --no-deps
+  test:
+    name: Test
+    env:
+      CARGO_INCREMENTAL: 0
+      SCCACHE_GHA_ENABLED: "true"
+      RUSTC_WRAPPER: "sccache"
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+        rust:
+          - stable
+        experimental:
+          - false
+        include:
+          - rust: nightly
+            os: ubuntu-latest
+            experimental: true
+    runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.experimental }}
+    steps:
+      - name: Setup | Checkout
+        uses: actions/checkout@v2
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.rust }}
+      - name: Run sccache-cache
+        uses: mozilla-actions/sccache-action@v0.0.3
+      # - run: |
+      #     curl -sLO https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-linux-x64 && \
+      #     chmod +x tailwindcss-linux-x64 && \
+      #     mv tailwindcss-linux-x64 tailwindcss && \
+      #     ./tailwindcss -i server/src/styles/tailwind.css -o target/tailwind.css
+      - name: Test
+        run: cargo test --all-targets
+  cargo-deny:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install cargo-binstall
+        run: curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
+      - name: Install cargo-deny
+        run: cargo binstall --no-confirm cargo-deny
+      - name: Cargo Deny
+        run: cargo-deny check bans

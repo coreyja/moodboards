@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        INSERT INTO Moodboards (name)\n        VALUES ('My cool Moodboard') RETURNING moodboard_id;\n    ",
+  "describe": {
+    "columns": [
+      {
+        "name": "moodboard_id",
+        "ordinal": 0,
+        "type_info": "Int64"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "60e1f35feaeb22a3104fbdff7cac8366abe2176a392da87e67856aa85c61c352"
+}

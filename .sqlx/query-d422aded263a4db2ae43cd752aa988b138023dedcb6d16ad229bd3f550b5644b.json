@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT json from Pictures\n        LEFT JOIN PictureRatings using (pexels_id)\n        WHERE Pictures.moodboard_id = ? AND PictureRatings.pexels_id is null",
+  "describe": {
+    "columns": [
+      {
+        "name": "json",
+        "ordinal": 0,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "d422aded263a4db2ae43cd752aa988b138023dedcb6d16ad229bd3f550b5644b"
+}
