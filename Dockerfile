@@ -7,6 +7,7 @@ RUN cargo chef prepare --recipe-path recipe.json
 
 FROM chef AS builder 
 RUN rustc --version; cargo --version; rustup --version
+RUN cargo install -f wasm-bindgen-cli
 
 # RUN curl -sLO https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-linux-x64 && \
 #   chmod +x tailwindcss-linux-x64 && \
@@ -20,6 +21,9 @@ COPY . .
 
 # COPY tailwind.config.js .
 # RUN ./tailwindcss -i server/src/styles/tailwind.css -o target/tailwind.css
+
+RUN cargo build --target wasm32-unknown-unknown --release -p frontend
+RUN wasm-bindgen target/wasm32-unknown-unknown/release/frontend.wasm --out-dir frontend/out --target web
 
 RUN SQLX_OFFLINE=true cargo build --release --locked --bin server
 

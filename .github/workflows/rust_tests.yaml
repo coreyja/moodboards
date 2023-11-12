@@ -31,6 +31,9 @@ jobs:
       #     chmod +x tailwindcss-linux-x64 && \
       #     mv tailwindcss-linux-x64 tailwindcss && \
       #     ./tailwindcss -i server/src/styles/tailwind.css -o target/tailwind.css
+      - run: cargo install -f wasm-bindgen-cli
+      - run: cargo build --target wasm32-unknown-unknown --release -p frontend
+      - run: wasm-bindgen target/wasm32-unknown-unknown/release/frontend.wasm --out-dir frontend/out --target web
       - name: Build | Lint
         run: cargo clippy --all-targets --no-deps
   doc:
@@ -46,6 +49,9 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: Run sccache-cache
         uses: mozilla-actions/sccache-action@v0.0.3
+      - run: cargo install -f wasm-bindgen-cli
+      - run: cargo build --target wasm32-unknown-unknown --release -p frontend
+      - run: wasm-bindgen target/wasm32-unknown-unknown/release/frontend.wasm --out-dir frontend/out --target web
       - name: Cargo Doc
         run: cargo doc --workspace --no-deps
   test:
@@ -82,6 +88,9 @@ jobs:
       #     chmod +x tailwindcss-linux-x64 && \
       #     mv tailwindcss-linux-x64 tailwindcss && \
       #     ./tailwindcss -i server/src/styles/tailwind.css -o target/tailwind.css
+      - run: cargo install -f wasm-bindgen-cli
+      - run: cargo build --target wasm32-unknown-unknown --release -p frontend
+      - run: wasm-bindgen target/wasm32-unknown-unknown/release/frontend.wasm --out-dir frontend/out --target web
       - name: Test
         run: cargo test --all-targets
   cargo-deny:
