@@ -1,12 +1,22 @@
 # Tasks
 
-- [x] Intergrate with the Pexels API for retrieving images from a collection
 - [ ] Figure out user modeling and authentication
 - [ ] Ability for a designer to create a new MoodBoard
-- [ ] Deploy this app somewhere
 - [ ] Make sure Sqlite DB is persisted across deploys
 - [ ] Create Better Layout of picture with rating buttons
 - [ ] Add LiteFS to replicate the DB across multiple containers
+
+## Done on Third Stream
+
+- [x] Intergrate with the Pexels API for retrieving images from a collection
+- [x] Deploy this app somewhere
+
+On this stream we decided to use the Pexels API to get images for our MoodBoard.
+We originally wanted to use the Pinterest API, but were unable to get access. Pexels API is free to use, so we went with that!
+Also in general Pexels is a great resource for free images.
+
+We also deployed the app to Fly.io.
+The current URL is: <https://moodboard.fly.dev>
 
 ## Done on Second Stream
 
