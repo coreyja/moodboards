@@ -32,6 +32,7 @@ jobs:
       #     mv tailwindcss-linux-x64 tailwindcss && \
       #     ./tailwindcss -i server/src/styles/tailwind.css -o target/tailwind.css
       - run: cargo install -f wasm-bindgen-cli
+      - run: rustup target add wasm32-unknown-unknown
       - run: cargo build --target wasm32-unknown-unknown --release -p frontend
       - run: wasm-bindgen target/wasm32-unknown-unknown/release/frontend.wasm --out-dir frontend/out --target web
       - name: Build | Lint
@@ -50,6 +51,7 @@ jobs:
       - name: Run sccache-cache
         uses: mozilla-actions/sccache-action@v0.0.3
       - run: cargo install -f wasm-bindgen-cli
+      - run: rustup target add wasm32-unknown-unknown
       - run: cargo build --target wasm32-unknown-unknown --release -p frontend
       - run: wasm-bindgen target/wasm32-unknown-unknown/release/frontend.wasm --out-dir frontend/out --target web
       - name: Cargo Doc
@@ -89,6 +91,7 @@ jobs:
       #     mv tailwindcss-linux-x64 tailwindcss && \
       #     ./tailwindcss -i server/src/styles/tailwind.css -o target/tailwind.css
       - run: cargo install -f wasm-bindgen-cli
+      - run: rustup target add wasm32-unknown-unknown
       - run: cargo build --target wasm32-unknown-unknown --release -p frontend
       - run: wasm-bindgen target/wasm32-unknown-unknown/release/frontend.wasm --out-dir frontend/out --target web
       - name: Test

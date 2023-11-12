@@ -22,6 +22,7 @@ COPY . .
 # COPY tailwind.config.js .
 # RUN ./tailwindcss -i server/src/styles/tailwind.css -o target/tailwind.css
 
+RUN rustup target add wasm32-unknown-unknown
 RUN cargo build --target wasm32-unknown-unknown --release -p frontend
 RUN wasm-bindgen target/wasm32-unknown-unknown/release/frontend.wasm --out-dir frontend/out --target web
 
